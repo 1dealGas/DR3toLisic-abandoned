@@ -7,12 +7,12 @@ script/source = "extends Control
 func _ready():
 	Engine.set_target_fps(30)
 
-func convert():
+func chart_convert():
 	# 行切分
 	var shell:PackedStringArray = $TextEdit.text.split(\"\\n\")
 
 	# 开头切分
-	var begin:Array
+	var begin:Array = []
 	for i in shell:
 		if i.begins_with(\"<\"): break
 		i = i.replace(\"=\",\"[\")
@@ -24,8 +24,8 @@ func convert():
 	# print(offset)
 
 	# 解析BPM
-	var bpm_value:Array
-	var bpm_pos:Array
+	var bpm_value:Array = []
+	var bpm_pos:Array = []
 	for i in begin:
 		if i[0] == \"#BPM \":
 			bpm_value.append( i[2].to_float() )
@@ -42,7 +42,7 @@ func convert():
 	# print(scs)
 
 	# 主体切分
-	var array1:Array
+	var array1:Array = []
 	for i in shell:
 		if i.begins_with(\"<\"):
 			i = i.replace(\">\",\"\")
@@ -95,13 +95,13 @@ func convert():
 		return 0
 
 	# Note分组转换：建立分组
-	var Tempos:Array
-	var Taps:Array
-	var Catches:Array
-	var LTaps:Array
-	var LCatches:Array
-	var RTaps:Array
-	var RCatches:Array
+	var Tempos:Array = []
+	var Taps:Array = []
+	var Catches:Array = []
+	var LTaps:Array = []
+	var LCatches:Array = []
+	var RTaps:Array = []
+	var RCatches:Array = []
 
 	# Note分组转换：导入数据
 	for i in tempo:
@@ -125,14 +125,14 @@ func convert():
 			continue
 
 		# 对应LCatch
-		if i[1]==2 and i[3]==0:
+		if i[1]!=1 and i[3]==0:
 			LCatches.append(
 				[ to_ms.call(i[2]) , 0]
 				)
 			continue
 
 		# 对应RCatch
-		if i[1]==2 and i[3]==13:
+		if i[1]!=1 and i[3]==13:
 			RCatches.append(
 				[ to_ms.call(i[2]) , 0]
 				)
@@ -146,14 +146,14 @@ func convert():
 			continue
 
 		# 对应一般Catch
-		if i[1]==2:
+		if i[1]!=1:
 			Catches.append(
 				[ to_ms.call(i[2]) , int( clamp(i[3]-2,1,9) ) , 0]
 				) #说明：i[3]-2 是DR3谱面换算到Lisic谱面的格线位置，限制在1到9之间，然后转为整数
 			continue
 
 	# 拼装
-	var Statistics:Dictionary
+	var Statistics:Dictionary = {}
 	Statistics[\"Num\"] = LTaps.size() + RTaps.size() + LCatches.size() + RCatches.size() + Taps.size() + Catches.size()
 	Statistics[\"TapNum\"] = LTaps.size() + RTaps.size() + Taps.size()
 	Statistics[\"Dif\"] = 0
@@ -161,20 +161,29 @@ func convert():
 	Statistics[\"PH\"] = 0
 	Statistics[\"IH\"] = 0
 
-	var Result:Dictionary
+	var Result:Dictionary = {}
 	Result[\"1deal\"] = \"Lisic\"
 	Result[\"Tempos\"] = Tempos
-	Result[\"Taps\"] = Taps
-	Result[\"Catches\"] = Catches
-	Result[\"LTaps\"] = LTaps
-	Result[\"RTaps\"] = RTaps
-	Result[\"LCatches\"] = LCatches
-	Result[\"RCatches\"] = RCatches
+	Result[\"Taps\"] = to_dict(Taps)
+	Result[\"Catches\"] = to_dict(Catches)
+	Result[\"LTaps\"] = to_dict(LTaps)
+	Result[\"RTaps\"] = to_dict(RTaps)
+	Result[\"LCatches\"] = to_dict(LCatches)
+	Result[\"RCatches\"] = to_dict(RCatches)
 	Result[\"Statistics\"] = Statistics
 
 	# 输出
 	var json = JSON.new()
 	$TextEdit.text = json.stringify(Result,\"\",false,false)
+
+# 更新：字典化
+func to_dict(sth:Array):
+	var itr:int = 0
+	var result_dict:Dictionary = {}
+	for i in sth:
+		result_dict[itr] = i
+		itr+=1
+	return result_dict
 "
 
 [node name="Control" type="Control"]
@@ -215,4 +224,4 @@ grow_vertical = 0
 text = "Convert"
 metadata/_edit_layout_mode = 1
 
-[connection signal="button_up" from="Button" to="." method="convert"]
+[connection signal="button_up" from="Button" to="." method="chart_convert"]
